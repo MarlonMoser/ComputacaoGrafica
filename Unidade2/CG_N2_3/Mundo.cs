@@ -11,7 +11,6 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
 using System.Collections.Generic;
-// using System.Diagnostics;
 
 namespace gcgcg
 {
@@ -24,6 +23,14 @@ namespace gcgcg
     private Objeto objetoSelecionado = null;
     private Transformacao4D matrizGrafo = new();
 
+    // Referência direta ao SrPalito para facilitar as atualizações de teclado
+    private SrPalito srPalito = null;
+
+    // Incrementos de interação
+    private const double INC_PE = 0.05;
+    private const double INC_RAIO = 0.05;
+    private const double INC_ANGULO = 5.0;
+
 #if CG_Gizmo
     private readonly float[] _sruEixos =
     [
@@ -33,21 +40,18 @@ namespace gcgcg
     ];
     private int _vertexBufferObject_sruEixos;
     private int _vertexArrayObject_sruEixos;
-
-    // // FPS
-    // private int frames = 0;
-    // private Stopwatch stopwatch = new();
 #endif
 
     private Shader _shaderVermelha;
     private Shader _shaderVerde;
     private Shader _shaderAzul;
     private Shader _shaderCiano;
+    private Shader _shaderAmarela;
 
     public Mundo(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
       : base(gameWindowSettings, nativeWindowSettings)
     {
-      mundo ??= new Objeto(null, ref rotuloAtual); //padrão Singleton
+      mundo ??= new Objeto(null, ref rotuloAtual); // padrão Singleton
     }
 
     protected override void OnLoad()
@@ -55,21 +59,22 @@ namespace gcgcg
       base.OnLoad();
 
       Utilitario.Diretivas();
-#if CG_DEBUG      
+#if CG_DEBUG
       Console.WriteLine("Tamanho interno da janela de desenho: " + ClientSize.X + "x" + ClientSize.Y);
 #endif
 
-      GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+      GL.ClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
       #region Cores
       _shaderVermelha = new Shader("Shaders/shader.vert", "Shaders/shaderVermelha.frag");
-      _shaderVerde = new Shader("Shaders/shader.vert", "Shaders/shaderVerde.frag");
-      _shaderAzul = new Shader("Shaders/shader.vert", "Shaders/shaderAzul.frag");
-      _shaderCiano = new Shader("Shaders/shader.vert", "Shaders/shaderCiano.frag");
+      _shaderVerde    = new Shader("Shaders/shader.vert", "Shaders/shaderVerde.frag");
+      _shaderAzul     = new Shader("Shaders/shader.vert", "Shaders/shaderAzul.frag");
+      _shaderCiano    = new Shader("Shaders/shader.vert", "Shaders/shaderCiano.frag");
+      _shaderAmarela  = new Shader("Shaders/shader.vert", "Shaders/shaderAmarela.frag");
       #endregion
 
 #if CG_Gizmo
-      #region Eixos: SRU  
+      #region Eixos: SRU
       _vertexBufferObject_sruEixos = GL.GenBuffer();
       GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject_sruEixos);
       GL.BufferData(BufferTarget.ArrayBuffer, _sruEixos.Length * sizeof(float), _sruEixos, BufferUsageHint.StaticDraw);
@@ -78,65 +83,21 @@ namespace gcgcg
       GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
       GL.EnableVertexAttribArray(0);
       #endregion
-
-      // stopwatch.Start();
 #endif
 
-      #region Objeto: polígono qualquer, só para testes e ajudar no desenvolvimento  
-      List<Ponto4D> pontosPoligonoBandeiraA =
-      [
-        new Ponto4D(0.25, 0.25),
-        new Ponto4D(0.75, 0.25),
-        new Ponto4D(0.75, 0.75),
-        new Ponto4D(0.50, 0.50),
-        new Ponto4D(0.25, 0.75),
-      ];
-      objetoSelecionado = new Poligono(mundo, ref rotuloAtual, pontosPoligonoBandeiraA);
-      #endregion
-      #region NÃO USAR: declara um objeto filho ao polígono
-      objetoSelecionado = new Ponto(objetoSelecionado, ref rotuloAtual, new Ponto4D(0.50, 0.75));
-      #endregion
-      #region Objeto: retângulo  
-      objetoSelecionado = new Retangulo(mundo, ref rotuloAtual, new Ponto4D(-0.25, 0.25), new Ponto4D(-0.75, 0.75))
-      {
-        PrimitivaTipo = PrimitiveType.LineLoop
-      };
-      #endregion
-      #region Objeto: segmento de reta  
-      objetoSelecionado = new SegReta(mundo, ref rotuloAtual, new Ponto4D(-0.25, -0.25), new Ponto4D(-0.75, -0.75));
-      #endregion
-      #region Objeto: ponto  
-      objetoSelecionado = new Ponto(mundo, ref rotuloAtual, new Ponto4D(0.25, -0.25))
-      {
-        PrimitivaTipo = PrimitiveType.Points,
-        PrimitivaTamanho = 10
-      };
-      #endregion
-
-#if CG_Privado
-      #region Objeto: circulo - origem
-      objetoSelecionado = new Circulo(mundo, ref rotuloAtual, 0.2)
+      #region Objeto: Sr. Palito
+      // Sr. Palito nasce com pé na origem, raio 0.5 e ângulo 45°
+      srPalito = new SrPalito(mundo, ref rotuloAtual)
       {
         ShaderObjeto = new Shader("Shaders/shader.vert", "Shaders/shaderAmarela.frag")
       };
+      objetoSelecionado = srPalito;
       #endregion
-      #region Objeto: circulo
-      objetoSelecionado = new Circulo(mundo, ref rotuloAtual, 0.1, new Ponto4D(0.0, -0.5))
-      {
-        ShaderObjeto = new Shader("Shaders/shader.vert", "Shaders/shaderAmarela.frag")
-      };
-      #endregion
-      #region Objeto: SrPalito  
-      objetoSelecionado = new SrPalito(mundo, ref rotuloAtual);
-      #endregion
-      #region Objeto: SplineBezier
-      objetoSelecionado = new SplineBezier(mundo, ref rotuloAtual);
-      #endregion
-      #region Objeto: SplineInter
-      objetoSelecionado = new SplineInter(mundo, ref rotuloAtual);
-      #endregion
-#endif
 
+#if CG_DEBUG
+      Console.WriteLine("Sr. Palito criado. Use Q/W para mover, A/S para raio, Z/X para ângulo.");
+      Console.WriteLine("Tecla T: imprimir estado | Tecla F: grafo de cena | ESC: sair");
+#endif
     }
 
     protected override void OnRenderFrame(FrameEventArgs e)
@@ -153,15 +114,8 @@ namespace gcgcg
 
 #if CG_Gizmo
       Gizmo_Sru3D();
-
-      // frames++;
-      // if (stopwatch.ElapsedMilliseconds >= 1000)
-      // {
-      //   Console.WriteLine($"FPS: {frames}");
-      //   frames = 0; 
-      //   stopwatch.Restart();
-      // }
 #endif
+
       SwapBuffers();
     }
 
@@ -169,17 +123,43 @@ namespace gcgcg
     {
       base.OnUpdateFrame(e);
 
-      #region Teclado
       var estadoTeclado = KeyboardState;
+
       if (estadoTeclado.IsKeyPressed(Keys.Escape))
         Close();
 
-      #region Funções de apoio para o desenvolvimento. Não é do enunciado  
-      if (estadoTeclado.IsKeyPressed(Keys.Space))
-        objetoSelecionado = Grafocena.GrafoCenaProximo(mundo, objetoSelecionado, grafoLista);
+      #region Controles do Sr. Palito (enunciado)
 
+      // Q = mover para esquerda
+      if (estadoTeclado.IsKeyPressed(Keys.Q))
+        srPalito.AtualizarPe(-INC_PE);
+
+      // W = mover para direita
+      if (estadoTeclado.IsKeyPressed(Keys.W))
+        srPalito.AtualizarPe(+INC_PE);
+
+      // A = diminuir raio
+      if (estadoTeclado.IsKeyPressed(Keys.A))
+        srPalito.AtualizarRaio(-INC_RAIO);
+
+      // S = aumentar raio
+      if (estadoTeclado.IsKeyPressed(Keys.S))
+        srPalito.AtualizarRaio(+INC_RAIO);
+
+      // Z = diminuir ângulo (girar no sentido horário)
+      if (estadoTeclado.IsKeyPressed(Keys.Z))
+        srPalito.AtualizarAngulo(-INC_ANGULO);
+
+      // X = aumentar ângulo (girar no sentido anti-horário)
+      if (estadoTeclado.IsKeyPressed(Keys.X))
+        srPalito.AtualizarAngulo(+INC_ANGULO);
+
+      #endregion
+
+      #region Funções auxiliares de debug (não fazem parte do enunciado)
       if (estadoTeclado.IsKeyPressed(Keys.F))
         Grafocena.GrafoCenaImprimir(mundo, grafoLista);
+
       if (estadoTeclado.IsKeyPressed(Keys.T))
       {
         if (objetoSelecionado != null)
@@ -187,49 +167,13 @@ namespace gcgcg
         else
           Console.WriteLine("objetoSelecionado: MUNDO \n__________________________________\n");
       }
-
-      if (estadoTeclado.IsKeyPressed(Keys.C) && objetoSelecionado != null)
-      {
-        objetoSelecionado.ShaderObjeto = _shaderCiano;
-      }
-
-      if (estadoTeclado.IsKeyPressed(Keys.Right) && objetoSelecionado != null)
-      {
-        if (objetoSelecionado.PontosListaTamanho > 0)
-        {
-          objetoSelecionado.PontosAlterar(new Ponto4D(objetoSelecionado.PontosId(0).X + 0.005, objetoSelecionado.PontosId(0).Y, 0), 0);
-          objetoSelecionado.ObjetoAtualizar();
-        }
-      }
-
-      if (estadoTeclado.IsKeyPressed(Keys.R) && objetoSelecionado != null)
-      {
-        //FIXME: Spline limpa os pontos da Spline, mas não limpa pontos e poliedro de controle 
-        objetoSelecionado.PontosApagar();
-      }
-      #endregion
-      #endregion
-
-      #region  Mouse
-      int janelaLargura = ClientSize.X;
-      int janelaAltura = ClientSize.Y;
-      Ponto4D mousePonto = new(MousePosition.X, MousePosition.Y);
-      Ponto4D sruPonto = Utilitario.NDC_TelaSRU(janelaLargura, janelaAltura, mousePonto);
-
-      if (estadoTeclado.IsKeyPressed(Keys.LeftShift) && objetoSelecionado != null && objetoSelecionado.PontosListaTamanho > 0)
-      {
-        objetoSelecionado.PontosAlterar(sruPonto, 0);
-        objetoSelecionado.ObjetoAtualizar();
-      }
-
       #endregion
     }
 
     protected override void OnResize(ResizeEventArgs e)
     {
       base.OnResize(e);
-
-#if CG_DEBUG      
+#if CG_DEBUG
       Console.WriteLine("Tamanho interno da janela de desenho: " + ClientSize.X + "x" + ClientSize.Y);
 #endif
       GL.Viewport(0, 0, ClientSize.X, ClientSize.Y);
@@ -252,6 +196,7 @@ namespace gcgcg
       GL.DeleteProgram(_shaderVerde.Handle);
       GL.DeleteProgram(_shaderAzul.Handle);
       GL.DeleteProgram(_shaderCiano.Handle);
+      GL.DeleteProgram(_shaderAmarela.Handle);
 
       base.OnUnload();
     }
@@ -262,15 +207,15 @@ namespace gcgcg
 #if CG_OpenGL
       var transform = Matrix4.Identity;
       GL.BindVertexArray(_vertexArrayObject_sruEixos);
-      // EixoX
+      // Eixo X (vermelho)
       _shaderVermelha.SetMatrix4("transform", transform);
       _shaderVermelha.Use();
       GL.DrawArrays(PrimitiveType.Lines, 0, 2);
-      // EixoY
+      // Eixo Y (verde)
       _shaderVerde.SetMatrix4("transform", transform);
       _shaderVerde.Use();
       GL.DrawArrays(PrimitiveType.Lines, 2, 2);
-      // EixoZ
+      // Eixo Z (azul)
       _shaderAzul.SetMatrix4("transform", transform);
       _shaderAzul.Use();
       GL.DrawArrays(PrimitiveType.Lines, 4, 2);
@@ -281,11 +226,11 @@ namespace gcgcg
 #if CG_DEBUG
     public static void CheckGLError(string message = "")
     {
-        var error = GL.GetError();
-        if (error != OpenTK.Graphics.OpenGL4.ErrorCode.NoError)
-        {
-            Console.WriteLine($"[OpenGL Error] {error} {message}");
-        }
+      var error = GL.GetError();
+      if (error != OpenTK.Graphics.OpenGL4.ErrorCode.NoError)
+      {
+        Console.WriteLine($"[OpenGL Error] {error} {message}");
+      }
     }
 #endif
 
