@@ -6,31 +6,24 @@ using System.Collections.Generic;
 namespace gcgcg
 {
   /// <summary>
-  /// Representa uma Spline de Interpolação (Catmull-Rom).
-  /// A curva passa por todos os pontos de controle.
+  /// Spline de Interpolação (Catmull-Rom) calculada usando
+  /// Matematica.InterpolarRetaValor() da CG_Biblioteca.
+  /// A curva passa por todos os pontos de controle intermediários.
   /// Herda de <see cref="Objeto"/>.
   /// </summary>
   internal class SplineInter : Objeto
   {
-    // Índice do ponto de controle atualmente selecionado (destacado em vermelho)
     private int ptoSelecionado = 0;
-
-    // Rótulo interno para criar objetos filhos
     private char rotuloAtual;
-
-    // Quantidade máxima e atual de pontos calculados na curva
     private readonly int splineQtdPtoMax = 100;
     private int splineQtdPto = 10;
 
-    // Poliedro de controle (desenhado em ciano)
+    // Poliedro de controle desenhado em ciano
     private Poligono poliedroControle;
 
-    // Lista de objetos Ponto visuais (pontos de controle)
+    // Pontos de controle visuais (objetos Ponto filhos desta spline)
     private readonly List<Ponto> pontosControleVisuais = [];
 
-    /// <summary>
-    /// Cria a SplineInter com 4 pontos de controle padrão.
-    /// </summary>
     public SplineInter(Objeto _paiRef, ref char _rotulo) : base(_paiRef, ref _rotulo)
     {
       rotuloAtual = _rotulo;
@@ -59,10 +52,7 @@ namespace gcgcg
       ];
 
       foreach (var pos in posicoes)
-      {
-        var pto = new Ponto(this, ref rotuloAtual, pos);
-        pontosControleVisuais.Add(pto);
-      }
+        pontosControleVisuais.Add(new Ponto(this, ref rotuloAtual, pos));
 
       AtualizarCorPontos();
     }
@@ -74,7 +64,7 @@ namespace gcgcg
     {
       List<Ponto4D> pts = [];
       foreach (var pv in pontosControleVisuais)
-        pts.Add(new Ponto4D(pv.ObterPosicao()));
+        pts.Add(new Ponto4D(pv.PontosId(0)));
 
       poliedroControle = new Poligono(this, ref rotuloAtual, pts)
       {
@@ -84,8 +74,8 @@ namespace gcgcg
     }
 
     /// <summary>
-    /// Recalcula os pontos da curva usando interpolação Catmull-Rom.
-    /// A curva passa por todos os pontos de controle (exceto os extremos que servem de tangente).
+    /// Recalcula a curva Catmull-Rom usando Matematica.InterpolarRetaValor()
+    /// da CG_Biblioteca para o cálculo de cada componente X e Y.
     /// </summary>
     public void Atualizar()
     {
@@ -94,21 +84,45 @@ namespace gcgcg
       int n = pontosControleVisuais.Count;
       if (n < 4) return;
 
-      // Catmull-Rom: segmentos de p1 até p[n-2] (os extremos são tangentes)
+      // Catmull-Rom: segmentos de p1 até p[n-2] (extremos são tangentes)
       for (int seg = 0; seg < n - 3; seg++)
       {
-        Ponto4D p0 = pontosControleVisuais[seg].ObterPosicao();
-        Ponto4D p1 = pontosControleVisuais[seg + 1].ObterPosicao();
-        Ponto4D p2 = pontosControleVisuais[seg + 2].ObterPosicao();
-        Ponto4D p3 = pontosControleVisuais[seg + 3].ObterPosicao();
+        Ponto4D p0 = pontosControleVisuais[seg].PontosId(0);
+        Ponto4D p1 = pontosControleVisuais[seg + 1].PontosId(0);
+        Ponto4D p2 = pontosControleVisuais[seg + 2].PontosId(0);
+        Ponto4D p3 = pontosControleVisuais[seg + 3].PontosId(0);
 
-        int passosSegmento = (seg == n - 4) ? splineQtdPto : splineQtdPto - 1;
+        int passos = (seg == n - 4) ? splineQtdPto : splineQtdPto - 1;
 
-        for (int i = 0; i <= passosSegmento; i++)
+        for (int i = 0; i <= passos; i++)
         {
-          double t = (double)i / splineQtdPto;
-          Ponto4D pto = CatmullRom(p0, p1, p2, p3, t);
-          pontosLista.Add(pto);
+          double t  = (double)i / splineQtdPto;
+          double t2 = t * t;
+          double t3 = t2 * t;
+
+          // Coeficientes Catmull-Rom
+          double c0 = -t3 + 2.0 * t2 - t;           // peso de p0
+          double c1 =  3.0 * t3 - 5.0 * t2 + 2.0;   // peso de p1
+          double c2 = -3.0 * t3 + 4.0 * t2 + t;      // peso de p2
+          double c3 =  t3 - t2;                       // peso de p3
+
+          // Usa Matematica.InterpolarRetaValor() para combinar cada coeficiente
+          // com os pares de pontos, acumulando X e Y separadamente
+          double x = 0.5 * (
+            Matematica.InterpolarRetaValor(0, p0.X, c0) +
+            Matematica.InterpolarRetaValor(0, p1.X, c1) +
+            Matematica.InterpolarRetaValor(0, p2.X, c2) +
+            Matematica.InterpolarRetaValor(0, p3.X, c3)
+          );
+
+          double y = 0.5 * (
+            Matematica.InterpolarRetaValor(0, p0.Y, c0) +
+            Matematica.InterpolarRetaValor(0, p1.Y, c1) +
+            Matematica.InterpolarRetaValor(0, p2.Y, c2) +
+            Matematica.InterpolarRetaValor(0, p3.Y, c3)
+          );
+
+          pontosLista.Add(new Ponto4D(x, y));
         }
       }
 
@@ -117,41 +131,15 @@ namespace gcgcg
     }
 
     /// <summary>
-    /// Calcula um ponto na curva Catmull-Rom para um dado t em [0,1].
-    /// Fórmula: 0.5 * [(2*P1) + (-P0+P2)*t + (2P0-5P1+4P2-P3)*t² + (-P0+3P1-3P2+P3)*t³]
-    /// </summary>
-    private static Ponto4D CatmullRom(Ponto4D p0, Ponto4D p1, Ponto4D p2, Ponto4D p3, double t)
-    {
-      double t2 = t * t;
-      double t3 = t2 * t;
-
-      double x = 0.5 * (
-        (2.0 * p1.X) +
-        (-p0.X + p2.X) * t +
-        (2.0 * p0.X - 5.0 * p1.X + 4.0 * p2.X - p3.X) * t2 +
-        (-p0.X + 3.0 * p1.X - 3.0 * p2.X + p3.X) * t3
-      );
-
-      double y = 0.5 * (
-        (2.0 * p1.Y) +
-        (-p0.Y + p2.Y) * t +
-        (2.0 * p0.Y - 5.0 * p1.Y + 4.0 * p2.Y - p3.Y) * t2 +
-        (-p0.Y + 3.0 * p1.Y - 3.0 * p2.Y + p3.Y) * t3
-      );
-
-      return new Ponto4D(x, y);
-    }
-
-    /// <summary>
-    /// Atualiza as posições do poliedro de controle.
+    /// Sincroniza os pontos do poliedro de controle com as posições atuais.
+    /// Usa PontosAlterar() de Objeto — método da CG_Biblioteca.
     /// </summary>
     private void AtualizarPoliedro()
     {
       if (poliedroControle == null) return;
 
-      poliedroControle.AtualizarPontos(
-        pontosControleVisuais.ConvertAll(p => new Ponto4D(p.ObterPosicao()))
-      );
+      for (int i = 0; i < pontosControleVisuais.Count; i++)
+        poliedroControle.PontosAlterar(new Ponto4D(pontosControleVisuais[i].PontosId(0)), i);
     }
 
     /// <summary>
@@ -164,7 +152,8 @@ namespace gcgcg
     }
 
     /// <summary>
-    /// Move o ponto de controle selecionado e recalcula a curva.
+    /// Move o ponto de controle selecionado (ptoInc) ou avança para o próximo (proximo=true).
+    /// Usa PontosId() e PontosAlterar() de Objeto — métodos da CG_Biblioteca.
     /// </summary>
     public void AtualizarSpline(Ponto4D ptoInc, bool proximo)
     {
@@ -175,25 +164,24 @@ namespace gcgcg
         return;
       }
 
-      var posAtual = pontosControleVisuais[ptoSelecionado].ObterPosicao();
-      pontosControleVisuais[ptoSelecionado].AtualizarPosicao(
-        new Ponto4D(posAtual.X + ptoInc.X, posAtual.Y + ptoInc.Y)
+      Ponto4D posAtual = pontosControleVisuais[ptoSelecionado].PontosId(0);
+      pontosControleVisuais[ptoSelecionado].PontosAlterar(
+        new Ponto4D(posAtual.X + ptoInc.X, posAtual.Y + ptoInc.Y), 0
       );
 
       Atualizar();
     }
 
     /// <summary>
-    /// Atualiza a cor dos pontos de controle: selecionado = vermelho, demais = branco.
+    /// Ponto selecionado = shader vermelho; demais = shader branco.
     /// </summary>
     private void AtualizarCorPontos()
     {
       for (int i = 0; i < pontosControleVisuais.Count; i++)
       {
-        if (i == ptoSelecionado)
-          pontosControleVisuais[i].ShaderObjeto = new Shader("Shaders/shader.vert", "Shaders/shaderVermelha.frag");
-        else
-          pontosControleVisuais[i].ShaderObjeto = new Shader("Shaders/shader.vert", "Shaders/shaderBranca.frag");
+        pontosControleVisuais[i].ShaderObjeto = (i == ptoSelecionado)
+          ? new Shader("Shaders/shader.vert", "Shaders/shaderVermelha.frag")
+          : new Shader("Shaders/shader.vert", "Shaders/shaderBranca.frag");
       }
     }
 
@@ -201,8 +189,7 @@ namespace gcgcg
     public override string ToString()
     {
       System.Console.WriteLine("__________________________________ \n");
-      string retorno;
-      retorno = "__ SplineInter _ QtdPto: " + splineQtdPto + " _ PtoSelecionado: " + ptoSelecionado + "\n";
+      string retorno = "__ SplineInter _ QtdPto: " + splineQtdPto + " _ PtoSelecionado: " + ptoSelecionado + "\n";
       retorno += base.ImprimeToString();
       return retorno;
     }

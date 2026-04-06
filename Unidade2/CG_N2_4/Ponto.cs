@@ -7,7 +7,6 @@ namespace gcgcg
   {
     public Ponto(Objeto _paiRef, ref char _rotulo) : this(_paiRef, ref _rotulo, new Ponto4D())
     {
-
     }
 
     public Ponto(Objeto _paiRef, ref char _rotulo, Ponto4D pto) : base(_paiRef, ref _rotulo)
@@ -25,22 +24,6 @@ namespace gcgcg
       base.ObjetoAtualizar();
     }
 
-    /// <summary>
-    /// Retorna a posição atual do ponto de controle.
-    /// </summary>
-    public Ponto4D ObterPosicao()
-    {
-      return base.PontosId(0);
-    }
-
-    /// <summary>
-    /// Atualiza a posição do ponto de controle e recarrega o VAO/VBO.
-    /// </summary>
-    public void AtualizarPosicao(Ponto4D novaPosicao)
-    {
-      base.PontosAlterar(novaPosicao, 0);
-    }
-
 #if CG_DEBUG
     public override string ToString()
     {
@@ -51,6 +34,5 @@ namespace gcgcg
       return retorno;
     }
 #endif
-
   }
 }
