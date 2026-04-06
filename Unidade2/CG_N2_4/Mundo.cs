@@ -128,6 +128,13 @@ namespace gcgcg
       if (estadoTeclado.IsKeyPressed(Keys.Escape))
         Close();
 
+      #region Tecla Espaco: proximo ponto de controle no grupo ativo
+      if (estadoTeclado.IsKeyPressed(Keys.Space))
+      {    
+        splineBezier.AtualizarSpline(new Ponto4D(0, 0), proximo: true);
+      }
+      #endregion
+      
       #region Teclas C/B/E/D: mover ponto de controle selecionado
       Ponto4D incremento = new(0, 0);
 
