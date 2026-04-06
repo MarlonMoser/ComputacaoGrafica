@@ -16,7 +16,16 @@ namespace gcgcg
 
     private void Atualizar()
     {
+      base.ObjetoAtualizar();
+    }
 
+    /// <summary>
+    /// Substitui a lista de pontos do polígono e recarrega o VAO/VBO.
+    /// Usado pelas splines para atualizar o poliedro de controle dinamicamente.
+    /// </summary>
+    public void AtualizarPontos(List<Ponto4D> novosPontos)
+    {
+      base.pontosLista = novosPontos;
       base.ObjetoAtualizar();
     }
 

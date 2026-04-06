@@ -22,8 +22,23 @@ namespace gcgcg
 
     public void Atualizar()
     {
-
       base.ObjetoAtualizar();
+    }
+
+    /// <summary>
+    /// Retorna a posição atual do ponto de controle.
+    /// </summary>
+    public Ponto4D ObterPosicao()
+    {
+      return base.PontosId(0);
+    }
+
+    /// <summary>
+    /// Atualiza a posição do ponto de controle e recarrega o VAO/VBO.
+    /// </summary>
+    public void AtualizarPosicao(Ponto4D novaPosicao)
+    {
+      base.PontosAlterar(novaPosicao, 0);
     }
 
 #if CG_DEBUG
