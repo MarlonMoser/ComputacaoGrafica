@@ -45,8 +45,8 @@ namespace gcgcg
       List<Ponto4D> posicoes =
       [
         new Ponto4D(-0.5, -0.5),
-        new Ponto4D(-0.2,  0.5),
-        new Ponto4D( 0.2,  0.5),
+        new Ponto4D(-0.5,  0.5),
+        new Ponto4D( 0.5,  0.5),
         new Ponto4D( 0.5, -0.5),
       ];
 

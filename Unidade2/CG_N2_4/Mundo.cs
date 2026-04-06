@@ -40,12 +40,8 @@ namespace gcgcg
     private Shader _shaderCiano;
     private Shader _shaderAmarela;
 
-    // As duas splines da atividade
+    //Spline Bezier escolhida
     private SplineBezier splineBezier = null;
-    private SplineInter splineInter = null;
-
-    // Controla qual grupo está ativo: 0 = Bézier, 1 = Interpolação
-    private int grupoAtivo = 0;
 
     // Incremento de movimento dos pontos de controle
     private const double INC_MOV = 0.05;
@@ -95,16 +91,8 @@ namespace gcgcg
       objetoSelecionado = splineBezier;
       #endregion
 
-      #region Objeto: SplineInter
-      splineInter = new SplineInter(mundo, ref rotuloAtual)
-      {
-        ShaderObjeto = _shaderAmarela
-      };
-      #endregion
-
 #if CG_DEBUG
       Console.WriteLine("CG_N2_4 — Splines interativas");
-      Console.WriteLine("  Q       : alternar entre SplineBezier e SplineInter");
       Console.WriteLine("  Espaco  : proximo ponto de controle (dentro do grupo ativo)");
       Console.WriteLine("  C/B/E/D : mover ponto de controle (cima/baixo/esq/dir)");
       Console.WriteLine("  + / ,   : aumentar/diminuir pontos calculados na spline");
@@ -140,26 +128,6 @@ namespace gcgcg
       if (estadoTeclado.IsKeyPressed(Keys.Escape))
         Close();
 
-      #region Tecla Q: alternar entre os dois grupos de spline
-      if (estadoTeclado.IsKeyPressed(Keys.Q))
-      {
-        grupoAtivo = (grupoAtivo + 1) % 2;
-#if CG_DEBUG
-        Console.WriteLine("Grupo ativo: " + (grupoAtivo == 0 ? "SplineBezier" : "SplineInter"));
-#endif
-      }
-      #endregion
-
-      #region Tecla Espaco: proximo ponto de controle no grupo ativo
-      if (estadoTeclado.IsKeyPressed(Keys.Space))
-      {
-        if (grupoAtivo == 0)
-          splineBezier.AtualizarSpline(new Ponto4D(0, 0), proximo: true);
-        else
-          splineInter.AtualizarSpline(new Ponto4D(0, 0), proximo: true);
-      }
-      #endregion
-
       #region Teclas C/B/E/D: mover ponto de controle selecionado
       Ponto4D incremento = new(0, 0);
 
@@ -170,10 +138,7 @@ namespace gcgcg
 
       if (incremento.X != 0 || incremento.Y != 0)
       {
-        if (grupoAtivo == 0)
-          splineBezier.AtualizarSpline(incremento, proximo: false);
-        else
-          splineInter.AtualizarSpline(incremento, proximo: false);
+        splineBezier.AtualizarSpline(incremento, proximo: false);
       }
       #endregion
 
@@ -181,7 +146,6 @@ namespace gcgcg
       if (estadoTeclado.IsKeyPressed(Keys.Equal) || estadoTeclado.IsKeyPressed(Keys.KeyPadAdd))
       {
         splineBezier.SplineQtdPto(+1);
-        splineInter.SplineQtdPto(+1);
 #if CG_DEBUG
         Console.WriteLine("Aumentou pontos da spline.");
 #endif
@@ -189,7 +153,6 @@ namespace gcgcg
       if (estadoTeclado.IsKeyPressed(Keys.Comma))
       {
         splineBezier.SplineQtdPto(-1);
-        splineInter.SplineQtdPto(-1);
 #if CG_DEBUG
         Console.WriteLine("Diminuiu pontos da spline.");
 #endif
@@ -201,12 +164,7 @@ namespace gcgcg
         Grafocena.GrafoCenaImprimir(mundo, grafoLista);
 
       if (estadoTeclado.IsKeyPressed(Keys.T))
-      {
-        if (grupoAtivo == 0)
-          Console.WriteLine(splineBezier);
-        else
-          Console.WriteLine(splineInter);
-      }
+        Console.WriteLine(splineBezier);
       #endregion
     }
 
