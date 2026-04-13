@@ -14,9 +14,8 @@ namespace gcgcg
       Atualizar();
     }
 
-    private void Atualizar()
+    public void Atualizar()
     {
-
       base.ObjetoAtualizar();
     }
 
@@ -30,6 +29,5 @@ namespace gcgcg
       return retorno;
     }
 #endif
-
   }
 }

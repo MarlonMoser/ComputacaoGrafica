@@ -7,7 +7,6 @@ namespace gcgcg
   {
     public Ponto(Objeto _paiRef, ref char _rotulo) : this(_paiRef, ref _rotulo, new Ponto4D())
     {
-
     }
 
     public Ponto(Objeto _paiRef, ref char _rotulo, Ponto4D pto) : base(_paiRef, ref _rotulo)
@@ -22,7 +21,6 @@ namespace gcgcg
 
     public void Atualizar()
     {
-
       base.ObjetoAtualizar();
     }
 
@@ -36,6 +34,5 @@ namespace gcgcg
       return retorno;
     }
 #endif
-
   }
 }
