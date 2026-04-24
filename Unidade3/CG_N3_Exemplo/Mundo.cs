@@ -164,9 +164,10 @@ namespace gcgcg
       {
         // Finaliza o polígono em construção
         objetoNovo.ObjetoAtualizar();
+        // Seleciona o polígono finalizado para exibir sua BBox
+        objetoSelecionado = objetoNovo;
         objetoNovo = null;
-        objetoSelecionado = null;
-        Console.WriteLine("Polígono finalizado.");
+        Console.WriteLine("Polígono finalizado e selecionado (BBox exibida).");
       }
 
       // ## 3. Estrutura de dados: polígono
@@ -222,17 +223,48 @@ namespace gcgcg
       // Utilize a tecla P para poder mudar o polígono selecionado para aberto ou fechado.  
       if (estadoTeclado.IsKeyPressed(Keys.P) && objetoSelecionado != null)
       {
-        Console.WriteLine("## 7. Interação: desenho - Tecla P");
+        // Só faz sentido para polígonos (classe Poligono que herda de Objeto)
+        if (objetoSelecionado is Poligono)
+        {
+          // Alterna entre LineLoop (fechado) e LineStrip (aberto)
+          if (objetoSelecionado.PrimitivaTipo == PrimitiveType.LineLoop)
+            objetoSelecionado.PrimitivaTipo = PrimitiveType.LineStrip;
+          else
+            objetoSelecionado.PrimitivaTipo = PrimitiveType.LineLoop;
+
+          // Atualiza o objeto para que mudanças sejam refletidas
+          objetoSelecionado.ObjetoAtualizar();
+
+          Console.WriteLine($"Polígono '{objetoSelecionado.Rotulo}' agora {(objetoSelecionado.PrimitivaTipo == PrimitiveType.LineLoop ? "fechado" : "aberto")}.");
+        }
+        else
+        {
+          Console.WriteLine("Tecla P pressionada, mas o objeto selecionado não é um polígono.");
+        }
       }
 
       // ## 8. Interação: cores
       // Utilize o teclado (teclas R=vermelho,G=verde,B=azul) para trocar as cores dos polígonos selecionado.  
       if (estadoTeclado.IsKeyPressed(Keys.R) && objetoSelecionado != null)  // R=vermelho
-        Console.WriteLine("## 8. Interação: cores - vermelho - Tecla R");
+      {
+        // Aplica shader vermelho ao objeto selecionado
+        objetoSelecionado.ShaderObjeto = _shaderVermelha;
+        // Não é estritamente necessário atualizar os buffers ao trocar shader,
+        // mas chamar ObjetoAtualizar garante que o estado do objeto esteja consistente.
+        objetoSelecionado.ObjetoAtualizar();
+      }
       if (estadoTeclado.IsKeyPressed(Keys.G) && objetoSelecionado != null)  // G=verde
-        Console.WriteLine("## 8. Interação: cores - verde - Tecla G");
+      {
+        // Aplica shader verde ao objeto selecionado
+        objetoSelecionado.ShaderObjeto = _shaderVerde;
+        objetoSelecionado.ObjetoAtualizar();
+      }
       if (estadoTeclado.IsKeyPressed(Keys.B) && objetoSelecionado != null)  // B=azul
-        Console.WriteLine("## 8. Interação: cores - azul - Tecla B");
+      {
+        // Aplica shader azul ao objeto selecionado
+        objetoSelecionado.ShaderObjeto = _shaderAzul;
+        objetoSelecionado.ObjetoAtualizar();
+      }
 
       // ## 10. Transformações Geométricas: translação
       // Utilizando as teclas das setas direcionais (cima/baixo,direita,esquerda) movimente o polígono selecionado.  
@@ -252,9 +284,18 @@ namespace gcgcg
         Console.WriteLine("## 11. Transformações Geométricas: escala - PageDown");
       // Utilizando as teclas Home/End redimensione o polígono selecionado em relação ao centro da sua BBox.  [TODO: testar]
       if (estadoTeclado.IsKeyPressed(Keys.Home) && objetoSelecionado != null)
-        Console.WriteLine("## 11. Transformações Geométricas: escala - Home");
+      {
+        // Aumenta a escala do objeto selecionado em relação ao centro da sua BBox
+        // Usar matriz de transformação (não alterar os vértices)
+        const double escalaMaior = 1.5; // 10% maior
+        objetoSelecionado.MatrizEscalaXYZBBox(escalaMaior, escalaMaior, 1.0);
+      }
       if (estadoTeclado.IsKeyPressed(Keys.End) && objetoSelecionado != null)
-        Console.WriteLine("## 11. Transformações Geométricas: escala - End");
+      {
+        // Diminui a escala do objeto selecionado em relação ao centro da sua BBox
+        const double escalaMenor = 0.9; // 10% menor
+        objetoSelecionado.MatrizEscalaXYZBBox(escalaMenor, escalaMenor, 1.0);
+      }
       // ## 12. Transformações Geométricas: rotação
       // Utilizando as teclas numéricas 1 e 2 gire o polígono selecionado em relação ao SRU.
       if (estadoTeclado.IsKeyPressed(Keys.D1) && objetoSelecionado != null)
@@ -284,8 +325,7 @@ namespace gcgcg
           // Adiciona o primeiro ponto duas vezes para possibilitar o "rastro" enquanto o mouse se move
           objetoNovo.PontosAdicionar(sruPonto);
           objetoNovo.PontosAdicionar(sruPonto);
-          // Seleciona o novo objeto enquanto estiver sendo criado
-          objetoSelecionado = objetoNovo;
+          // Não seleciona o objeto enquanto estiver em construção para evitar exibir a BBox
         }
         else
         {
