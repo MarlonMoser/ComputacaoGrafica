@@ -304,9 +304,31 @@ namespace gcgcg
         Console.WriteLine("## 12. Transformações Geométricas: rotação - Tecla 2");
       // Utilizando as teclas numéricas 3 e 4 gire o polígono selecionado em relação ao centro da sua BBox.
       if (estadoTeclado.IsKeyPressed(Keys.D3) && objetoSelecionado != null)
-        Console.WriteLine("## 12. Transformações Geométricas: rotação - Tecla 3");
+      {
+        // Rotaciona o polígono selecionado em torno do centro da sua BBox (10 graus)
+        if (objetoSelecionado is Poligono)
+        {
+          const double angulo = 10.0; // graus
+          objetoSelecionado.MatrizRotacaoZBBox(angulo);
+        }
+        else
+        {
+          Console.WriteLine("Tecla D3 pressionada, mas o objeto selecionado não é um polígono.");
+        }
+      }
       if (estadoTeclado.IsKeyPressed(Keys.D4) && objetoSelecionado != null)
-        Console.WriteLine("## 12. Transformações Geométricas: rotação - Tecla 4");
+      {
+        // Rotaciona o polígono selecionado em torno do centro da sua BBox (-10 graus)
+        if (objetoSelecionado is Poligono)
+        {
+          const double angulo = -10.0; // graus
+          objetoSelecionado.MatrizRotacaoZBBox(angulo);
+        }
+        else
+        {
+          Console.WriteLine("Tecla D4 pressionada, mas o objeto selecionado não é um polígono.");
+        }
+      }
       #endregion
 
       #region  Mouse
