@@ -267,34 +267,77 @@ namespace gcgcg
       }
 
       // ## 10. Transformações Geométricas: translação
-      // Utilizando as teclas das setas direcionais (cima/baixo,direita,esquerda) movimente o polígono selecionado.  
+      // Utilizando as teclas das setas direcionais (cima/baixo,direita,esquerda) movimente o polígono selecionado.
+      // As translações são especificadas no espaço global (SRU) e convertidas para coordenadas locais do objeto
+      // considerando a matriz global do grafo de cena.
+      const double passoTranslacao = 0.05;
       if (estadoTeclado.IsKeyPressed(Keys.Left) && objetoSelecionado != null)
-        Console.WriteLine("## 10. Transformações Geométricas: translação - esquerda");
+      {
+        Ponto4D deltaWorld = new Ponto4D(-passoTranslacao, 0.0, 0.0, 0.0); // vetor (w=0)
+        Ponto4D deltaLocal = objetoSelecionado.MatrizGlobalInversa(deltaWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(deltaLocal.X, deltaLocal.Y, deltaLocal.Z);
+      }
       if (estadoTeclado.IsKeyPressed(Keys.Right) && objetoSelecionado != null)
-        Console.WriteLine("## 10. Transformações Geométricas: translação - direita");
+      {
+        Ponto4D deltaWorld = new Ponto4D(passoTranslacao, 0.0, 0.0, 0.0);
+        Ponto4D deltaLocal = objetoSelecionado.MatrizGlobalInversa(deltaWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(deltaLocal.X, deltaLocal.Y, deltaLocal.Z);
+      }
       if (estadoTeclado.IsKeyPressed(Keys.Up) && objetoSelecionado != null)
-        Console.WriteLine("## 10. Transformações Geométricas: translação - cima");
+      {
+        Ponto4D deltaWorld = new Ponto4D(0.0, passoTranslacao, 0.0, 0.0);
+        Ponto4D deltaLocal = objetoSelecionado.MatrizGlobalInversa(deltaWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(deltaLocal.X, deltaLocal.Y, deltaLocal.Z);
+      }
       if (estadoTeclado.IsKeyPressed(Keys.Down) && objetoSelecionado != null)
-        Console.WriteLine("## 10. Transformações Geométricas: translação - baixo");
+      {
+        Ponto4D deltaWorld = new Ponto4D(0.0, -passoTranslacao, 0.0, 0.0);
+        Ponto4D deltaLocal = objetoSelecionado.MatrizGlobalInversa(deltaWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(deltaLocal.X, deltaLocal.Y, deltaLocal.Z);
+      }
       // ## 11. Transformações Geométricas: escala
       // Utilizando as teclas PageUp/PageDown redimensione o polígono selecionado em relação ao SRU.  [TODO: testar]
       if (estadoTeclado.IsKeyPressed(Keys.PageUp) && objetoSelecionado != null)
-        Console.WriteLine("## 11. Transformações Geométricas: escala - PageUp");
+      {
+        // Escala em relação ao SRU (origem do mundo)
+        const double escalaMaiorLocal = 1.1;
+        // pivot em SRU = (0,0,0)
+        Ponto4D pivotWorld = new Ponto4D(0.0, 0.0, 0.0, 1.0);
+        Ponto4D pivotLocal = objetoSelecionado.MatrizGlobalInversa(pivotWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(-pivotLocal.X, -pivotLocal.Y, -pivotLocal.Z);
+        objetoSelecionado.MatrizEscalaXYZ(escalaMaiorLocal, escalaMaiorLocal, 1.0);
+        objetoSelecionado.MatrizTranslacaoXYZ(pivotLocal.X, pivotLocal.Y, pivotLocal.Z);
+      }
       if (estadoTeclado.IsKeyPressed(Keys.PageDown) && objetoSelecionado != null)
-        Console.WriteLine("## 11. Transformações Geométricas: escala - PageDown");
+      {
+        const double escalaMenorLocal = 0.9;
+        Ponto4D pivotWorld = new Ponto4D(0.0, 0.0, 0.0, 1.0);
+        Ponto4D pivotLocal = objetoSelecionado.MatrizGlobalInversa(pivotWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(-pivotLocal.X, -pivotLocal.Y, -pivotLocal.Z);
+        objetoSelecionado.MatrizEscalaXYZ(escalaMenorLocal, escalaMenorLocal, 1.0);
+        objetoSelecionado.MatrizTranslacaoXYZ(pivotLocal.X, pivotLocal.Y, pivotLocal.Z);
+      }
       // Utilizando as teclas Home/End redimensione o polígono selecionado em relação ao centro da sua BBox.  [TODO: testar]
       if (estadoTeclado.IsKeyPressed(Keys.Home) && objetoSelecionado != null)
       {
         // Aumenta a escala do objeto selecionado em relação ao centro da sua BBox
-        // Usar matriz de transformação (não alterar os vértices)
-        const double escalaMaior = 1.5; // 10% maior
-        objetoSelecionado.MatrizEscalaXYZBBox(escalaMaior, escalaMaior, 1.0);
+        // Considerar transformação global: convertemos o pivô (centro da BBox em SRU) para coordenadas locais
+        const double escalaMaior = 1.5; // fator de escala
+        Ponto4D pivotWorld = objetoSelecionado.Bbox().ObterCentro;
+        Ponto4D pivotLocal = objetoSelecionado.MatrizGlobalInversa(pivotWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(-pivotLocal.X, -pivotLocal.Y, -pivotLocal.Z);
+        objetoSelecionado.MatrizEscalaXYZ(escalaMaior, escalaMaior, 1.0);
+        objetoSelecionado.MatrizTranslacaoXYZ(pivotLocal.X, pivotLocal.Y, pivotLocal.Z);
       }
       if (estadoTeclado.IsKeyPressed(Keys.End) && objetoSelecionado != null)
       {
         // Diminui a escala do objeto selecionado em relação ao centro da sua BBox
-        const double escalaMenor = 0.9; // 10% menor
-        objetoSelecionado.MatrizEscalaXYZBBox(escalaMenor, escalaMenor, 1.0);
+        const double escalaMenor = 0.9;
+        Ponto4D pivotWorld = objetoSelecionado.Bbox().ObterCentro;
+        Ponto4D pivotLocal = objetoSelecionado.MatrizGlobalInversa(pivotWorld);
+        objetoSelecionado.MatrizTranslacaoXYZ(-pivotLocal.X, -pivotLocal.Y, -pivotLocal.Z);
+        objetoSelecionado.MatrizEscalaXYZ(escalaMenor, escalaMenor, 1.0);
+        objetoSelecionado.MatrizTranslacaoXYZ(pivotLocal.X, pivotLocal.Y, pivotLocal.Z);
       }
       // ## 12. Transformações Geométricas: rotação
       // Utilizando as teclas numéricas 1 e 2 gire o polígono selecionado em relação ao SRU.
@@ -305,11 +348,15 @@ namespace gcgcg
       // Utilizando as teclas numéricas 3 e 4 gire o polígono selecionado em relação ao centro da sua BBox.
       if (estadoTeclado.IsKeyPressed(Keys.D3) && objetoSelecionado != null)
       {
-        // Rotaciona o polígono selecionado em torno do centro da sua BBox (10 graus)
+        // Rotaciona o polígono selecionado em torno do centro da sua BBox (10 graus) considerando transformação global
         if (objetoSelecionado is Poligono)
         {
           const double angulo = 10.0; // graus
-          objetoSelecionado.MatrizRotacaoZBBox(angulo);
+          Ponto4D pivotWorld = objetoSelecionado.Bbox().ObterCentro;
+          Ponto4D pivotLocal = objetoSelecionado.MatrizGlobalInversa(pivotWorld);
+          objetoSelecionado.MatrizTranslacaoXYZ(-pivotLocal.X, -pivotLocal.Y, -pivotLocal.Z);
+          objetoSelecionado.MatrizRotacao(angulo);
+          objetoSelecionado.MatrizTranslacaoXYZ(pivotLocal.X, pivotLocal.Y, pivotLocal.Z);
         }
         else
         {
@@ -318,11 +365,15 @@ namespace gcgcg
       }
       if (estadoTeclado.IsKeyPressed(Keys.D4) && objetoSelecionado != null)
       {
-        // Rotaciona o polígono selecionado em torno do centro da sua BBox (-10 graus)
+        // Rotaciona o polígono selecionado em torno do centro da sua BBox (-10 graus) considerando transformação global
         if (objetoSelecionado is Poligono)
         {
           const double angulo = -10.0; // graus
-          objetoSelecionado.MatrizRotacaoZBBox(angulo);
+          Ponto4D pivotWorld = objetoSelecionado.Bbox().ObterCentro;
+          Ponto4D pivotLocal = objetoSelecionado.MatrizGlobalInversa(pivotWorld);
+          objetoSelecionado.MatrizTranslacaoXYZ(-pivotLocal.X, -pivotLocal.Y, -pivotLocal.Z);
+          objetoSelecionado.MatrizRotacao(angulo);
+          objetoSelecionado.MatrizTranslacaoXYZ(pivotLocal.X, pivotLocal.Y, pivotLocal.Z);
         }
         else
         {
@@ -343,16 +394,24 @@ namespace gcgcg
         // Se não há um polígono em construção, cria um novo e adiciona o primeiro vértice
         if (objetoNovo == null)
         {
-          objetoNovo = new Poligono(mundo, ref rotuloAtual, new System.Collections.Generic.List<Ponto4D>());
+          // Se um objeto está selecionado, cria o polígono como filho do selecionado,
+          // caso contrário adiciona ao mundo (raiz do grafo)
+          Objeto pai = objetoSelecionado ?? mundo;
+          objetoNovo = new Poligono(pai, ref rotuloAtual, new System.Collections.Generic.List<Ponto4D>());
+
+          // Converter o ponto SRU (mundo) para coordenadas locais do novo objeto
+          Ponto4D localPonto = objetoNovo.MatrizGlobalInversa(sruPonto);
+
           // Adiciona o primeiro ponto duas vezes para possibilitar o "rastro" enquanto o mouse se move
-          objetoNovo.PontosAdicionar(sruPonto);
-          objetoNovo.PontosAdicionar(sruPonto);
+          objetoNovo.PontosAdicionar(localPonto);
+          objetoNovo.PontosAdicionar(localPonto);
           // Não seleciona o objeto enquanto estiver em construção para evitar exibir a BBox
         }
         else
         {
-          // Adiciona um novo vértice ao polígono em construção
-          objetoNovo.PontosAdicionar(sruPonto);
+          // Adiciona um novo vértice ao polígono em construção (converter para coordenadas locais)
+          Ponto4D localPonto = objetoNovo.MatrizGlobalInversa(sruPonto);
+          objetoNovo.PontosAdicionar(localPonto);
         }
       }
       if (MouseState.IsButtonReleased(MouseButton.Right))
